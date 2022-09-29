@@ -37,7 +37,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 {
 }
 
-/* æ’å…¥ä¸€ä¸ªé”®ä¸ºkey å€¼ä¸ºvalçš„èŠ‚ç‚¹ */
+/* ²åÈëÒ»¸ö¼üÎªkey ÖµÎªvalµÄ½Úµã */
 template <class KeyType, class ValType>
 BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, const ValType &val)
 {
@@ -46,11 +46,11 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, co
 	while (currentNode != nullptr)
 	{
 		if (currentNode->key == key)
-		{ /* å¦‚æœå·²ç»å­˜åœ¨é”®ï¼Œå°±ç›´æ¥ä¿®æ”¹ */
+		{ /* Èç¹ûÒÑ¾­´æÔÚ¼ü£¬¾ÍÖ±½ÓĞŞ¸Ä */
 			curretNode->val = val;
 			return *this;
 		}
-		// å¯»æ‰¾æ’å…¥çš„ä½ç½®
+		// Ñ°ÕÒ²åÈëµÄÎ»ÖÃ
 		if (currentNode->key < key)
 		{
 			currentFather = currentNode;
@@ -64,7 +64,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, co
 	}
 	currrentNode = new Node;
 	if (currentFather == nullptr)
-	{ // æ­¤æ—¶è¯´æ˜æ˜¯ç©ºæ ‘ï¼Œç›´æ¥æ’å…¥æ ¹èŠ‚ç‚¹
+	{ // ´ËÊ±ËµÃ÷ÊÇ¿ÕÊ÷£¬Ö±½Ó²åÈë¸ù½Úµã
 		root = currentNode;
 		root->key = key;
 		root->val = val;
@@ -76,7 +76,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, co
 	}
 	currentNode->val = val;
 	currentNode->key = key;
-	currentNode->color = RED; //å…ˆè®¾ç½®ä¸ºçº¢è‰²ï¼Œè‹¥å‡ºç°å†²çªå†ä¿®æ”¹
+	currentNode->color = RED; //ÏÈÉèÖÃÎªºìÉ«£¬Èô³öÏÖ³åÍ»ÔÙĞŞ¸Ä
 	currentNode->rightChild = nullptr;
 	currentNode->father = currentFather;
 	currentNode->leftChild = nullptr;
@@ -110,7 +110,7 @@ void BTree<KeyType, ValType>::rotateLeft(const Node<KeyType, ValType> *node)
 	Node<KeyType, ValType> *old = node;
 	Node<KeyType, ValType> *rightOld = node->rightChild;
 	Node<KeyType, ValType> *rightLeftOld = leftOld->leftChild;
-	//ï¿½ï¿½ï¿½Â¸ï¿½ï¿½Úµï¿½ï¿½ï¿½Ó½Úµï¿½
+	//?????????????
 	if (father == nullptr)
 	{
 		this->root = rightOld;
@@ -122,11 +122,11 @@ void BTree<KeyType, ValType>::rotateLeft(const Node<KeyType, ValType> *node)
 		else if (father->rightChild == node)
 			father->rightChild = rightOld;
 	}
-	node = rightOld; //ï¿½ï¿½Ç°ï¿½Úµï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ÎªÔ­ï¿½Ò¶ï¿½ï¿½ï¿½
+	node = rightOld; //??????????????????
 	node->father = father;
-	node->leftChild = old; //ï¿½Ò¶ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Ó¸ï¿½ÎªÔ­ï¿½Úµï¿½
+	node->leftChild = old; //?????????????????
 	if (rightLeftOld != nullptr)
-		node->leftChild->rightChild = rightLeftOld; //ï¿½ï¿½ï¿½Ô­ï¿½Ò¶ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Ó´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½Ë¸ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½Ò¶ï¿½ï¿½ï¿½
+		node->leftChild->rightChild = rightLeftOld; //????????????????????????????????????????????
 }
 
 template <class KeyType, class ValType>
@@ -136,7 +136,7 @@ void BTree<KeyType, ValType>::rotateRight(const Node<KeyType, ValType> *node)
 	Node<KeyType, ValType> *old = node;
 	Node<KeyType, ValType> *leftOld = node->leftChild;
 	Node<KeyType, ValType> *leftRightOld = leftOld->rightChild;
-	//ï¿½ï¿½ï¿½Â¸ï¿½ï¿½Úµï¿½ï¿½ï¿½Ó½Úµï¿½
+	//?????????????
 	if (father == nullptr)
 	{
 		this->root = rightOld;
