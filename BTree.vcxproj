@@ -142,7 +142,7 @@
     <ClInclude Include="BTree.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BTree.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

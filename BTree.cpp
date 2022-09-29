@@ -4,6 +4,7 @@ using namespace std;
 template <class KeyType, class ValType>
 BTree<KeyType, ValType>::BTree()
 {
+
 }
 
 template <class KeyType, class ValType>
@@ -47,14 +48,14 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, co
 	{
 		if (currentNode->key == key)
 		{ /* 如果已经存在键，就直接修改 */
-			curretNode->val = val;
+			currentNode->val = val;
 			return *this;
 		}
 		// 寻找插入的位置
 		if (currentNode->key < key)
 		{
 			currentFather = currentNode;
-			currentNode = currenNode->rightChild;
+			currentNode = currentNode->rightChild;
 		}
 		else
 		{
@@ -62,13 +63,13 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, co
 			currentNode = currentNode->leftChild;
 		}
 	}
-	currrentNode = new Node;
+	currentNode = new Node<KeyType, ValType>;
 	if (currentFather == nullptr)
 	{ // 此时说明是空树，直接插入根节点
 		root = currentNode;
 		root->key = key;
 		root->val = val;
-		root->color = BLACK;
+		root->color = NodeColor::BLACK;
 		root->father = nullptr;
 		root->rightChild = nullptr;
 		root->leftChild = nullptr;
@@ -76,18 +77,15 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::setData(const KeyType &key, co
 	}
 	currentNode->val = val;
 	currentNode->key = key;
-	currentNode->color = RED; //先设置为红色，若出现冲突再修改
+	currentNode->color = NodeColor::RED; //先设置为红色，若出现冲突再修改
 	currentNode->rightChild = nullptr;
 	currentNode->father = currentFather;
 	currentNode->leftChild = nullptr;
 	if (currentFather->key < key)
-	{
 		currentFather->rightChild = currentNode;
-	}
 	else
-	{
 		currentFather->leftChild = currentNode;
-	}
+	this->fitNeighbourRedNode(currentNode);
 }
 
 template <class KeyType, class ValType>
@@ -109,8 +107,8 @@ void BTree<KeyType, ValType>::rotateLeft(const Node<KeyType, ValType> *node)
 	Node<KeyType, ValType> *father = node->father;
 	Node<KeyType, ValType> *old = node;
 	Node<KeyType, ValType> *rightOld = node->rightChild;
-	Node<KeyType, ValType> *rightLeftOld = leftOld->leftChild;
-	//?????????????
+	Node<KeyType, ValType> *rightLeftOld = rightOld->leftChild;
+	//如果是根节点
 	if (father == nullptr)
 	{
 		this->root = rightOld;
@@ -122,11 +120,11 @@ void BTree<KeyType, ValType>::rotateLeft(const Node<KeyType, ValType> *node)
 		else if (father->rightChild == node)
 			father->rightChild = rightOld;
 	}
-	node = rightOld; //??????????????????
+	node = rightOld; //此时右儿子已经是原节点的位置
 	node->father = father;
-	node->leftChild = old; //?????????????????
-	if (rightLeftOld != nullptr)
-		node->leftChild->rightChild = rightLeftOld; //????????????????????????????????????????????
+	node->leftChild = old; //原右儿子的左节点是原节点
+	if (rightLeftOld != nullptr)//如果存在原右儿子的左节点
+		node->leftChild->rightChild = rightLeftOld; //添加到原节点的右节点
 }
 
 template <class KeyType, class ValType>
@@ -136,21 +134,112 @@ void BTree<KeyType, ValType>::rotateRight(const Node<KeyType, ValType> *node)
 	Node<KeyType, ValType> *old = node;
 	Node<KeyType, ValType> *leftOld = node->leftChild;
 	Node<KeyType, ValType> *leftRightOld = leftOld->rightChild;
-	//?????????????
+
 	if (father == nullptr)
 	{
-		this->root = rightOld;
+		this->root = leftOld;
 	}
 	else
 	{
 		if (father->leftChild == node)
-			father->leftChild = rightOld;
+			father->leftChild = leftOld;
 		else if (father->rightChild == node)
-			father->rightChild = rightOld;
+			father->rightChild = leftOld;
 	}
 	node = leftOld;
 	node->father = father;
-	node->rightChild = fatherOld;
+	node->rightChild = father;
 	if (leftRightOld != nullptr)
 		node->rightChild->leftChild = leftRightOld;
+}
+
+
+/**
+* 修改两个相邻节点都是红色的情况
+*				黑
+*			   /  \
+*			 红    黑
+*			/ \   / \
+*		   红-->node
+**/
+template <class KeyType, class ValType>
+void BTree<KeyType, ValType>::fitNeighbourRedNode(const Node<KeyType, ValType>* node) {
+	Node<KeyType, ValType>* currentNode = node;
+	Node<KeyType, ValType>* grandPa = node->father->father;
+	Node<KeyType, ValType>* father = node->father;
+	Node<KeyType, ValType>* uncle;
+	while (grandPa != nullptr) {
+		if (grandPa->leftChild == father)
+			uncle = grandPa->rightChild;
+		else
+			uncle = grandPa->leftChild;
+		father = currentNode->father;
+		grandPa = father->father;
+		if (father->color == NodeColor::BLACK)
+			break;
+		//如果叔叔也是红色，就把叔叔和父亲和爷爷反色
+		if (uncle != nullptr && uncle->color == NodeColor::RED) {
+			uncle->color = father->color = NodeColor::BLACK;
+			grandPa->color = NodeColor::RED;
+		}
+		else {
+			//情况一
+			/***
+			*				黑
+			*			   /  \
+			*			 红    黑(NULL)
+			*			/ \   / \
+			*		   红 RB RB RB
+			**/
+			if (father->leftChild == currentNode && grandPa->leftChild == father) {
+				this->rotateRight(grandPa);
+				grandPa->color = NodeColor::BLACK;
+				uncle->color = NodeColor::RED;
+			}
+			//情况二
+			/***
+			*				黑
+			*			   /  \
+			*			 红    黑(NULL)
+			*			/ \   / \
+			*		   RB 红 RB RB
+			**/
+			else if (father->rightChild == currentNode && grandPa->leftChild == father) {
+				this->rotateLeft(father);
+				this->rotateRight(grandPa);
+				grandPa->color = NodeColor::BLACK;
+				uncle->color = NodeColor::RED;
+			}
+			//情况三
+			/***
+			*				黑
+			*			   /  \
+			*		黑(NULL)   红
+			*			/ \   / \
+			*		   RB RB RB 红
+			**/
+			else if (father->rightChild == currentNode && grandPa->rightChild == father) {
+				this->rotateLeft(grandPa);
+				grandPa->color = NodeColor::BLACK;
+				uncle->color = NodeColor::RED;
+			}			
+			//情况四
+			/***
+			*				黑
+			*			   /  \
+			*		黑(NULL)   红
+			*			/ \   / \
+			*		   RB RB 红 RB
+			**/
+			else if (father->leftChild == currentNode && grandPa->leftChild == father) {
+				this->rotateRight(father);
+				this->rotateLeft(grandPa);
+				grandPa->color = NodeColor::BLACK;
+				uncle->color = NodeColor::RED;
+			}
+			break;
+		}
+		currentNode = grandPa;
+	}
+
 }
