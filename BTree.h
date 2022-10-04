@@ -35,21 +35,66 @@ private:
 public:
 	BTree();
 	~BTree();
+	int exist(const KeyType& key);
 	ValType &getData(const KeyType &key);
 	BTree<KeyType, ValType> &remove(const KeyType &key);
 	BTree<KeyType, ValType> &setData(const KeyType &key, const ValType &val);
-
+	ValType& operator[](const KeyType& key);
+	int empty() {
+		return root == nullptr;
+	}
 private:
 	void releaseMemory(Node<KeyType, ValType> *node);
 	void rotateLeft(Node<KeyType, ValType> *node);
 	void rotateRight(Node<KeyType, ValType> *node);
 	void fitNeighbourRedNode(Node<KeyType, ValType> *node);
 	void fitUnblancedBlackNode(Node<KeyType, ValType> *node);
+	void print(Node<KeyType, ValType>* node);
 };
 
 template <class KeyType, class ValType>
 BTree<KeyType, ValType>::BTree()
 {
+}
+
+template <class KeyType, class ValType>
+int BTree<KeyType, ValType>::exist(const KeyType& key)
+{
+	Node<KeyType, ValType>* currentNode = root;
+	while (currentNode != nullptr)
+	{
+		if (currentNode->key == key)
+			return 1;
+		if (currentNode->key < key)
+			currentNode = currentNode->rightChild;
+		else
+			currentNode = currentNode->leftChild;
+	}
+	return 0;
+}
+
+template <class KeyType, class ValType>
+void BTree<KeyType, ValType>::print(Node<KeyType, ValType>* n)
+{
+	static int level = -1; //记录是第几层次
+	int i;
+	if (NULL == n)
+		return;
+
+	level++;
+	print(n->rightChild);
+	level--;
+
+	level++;
+	for (i = 0; i < level; i++)
+		printf("\t");
+	//printf("%2d\n", n->key);
+	if (n->color == NodeColor::RED)
+		printf("R\n");
+	else
+		printf("B\n");
+	print(n->leftChild);
+	level--;
 }
 
 template <class KeyType, class ValType>
@@ -79,9 +124,25 @@ ValType &BTree<KeyType, ValType>::getData(const KeyType &key)
 }
 
 template <class KeyType, class ValType>
+ValType &BTree<KeyType, ValType>::operator[](const KeyType &key)
+{
+	Node<KeyType, ValType> *currentNode = root;
+	while (currentNode != nullptr)
+	{
+		if (currentNode->key == key)
+			return currentNode->val;
+		if (currentNode->key < key)
+			currentNode = currentNode->rightChild;
+		else
+			currentNode = currentNode->leftChild;
+	}
+	throw runtime_error("there isn't a key in the tree that you give.");
+}
+
+template <class KeyType, class ValType>
 BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 {
-	Node<Keytype, ValType> *currentNode = root;
+	Node<KeyType, ValType> *currentNode = root;
 	while (currentNode != nullptr)
 	{
 		if (key == currentNode->key)
@@ -95,9 +156,9 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 
 	while (currentNode->leftChild != nullptr || currentNode->rightChild != nullptr)
 	{
-		Node<Keytype, ValType> *forwardSon = currentNode->leftChild;
-		Node<Keytype, ValType> *backwardSon = currentNode->rightChild;
-		Node<Keytype, ValType> *replaceNode = nullptr;
+		Node<KeyType, ValType> *forwardSon = currentNode->leftChild;
+		Node<KeyType, ValType> *backwardSon = currentNode->rightChild;
+		Node<KeyType, ValType> *replaceNode = nullptr;
 		// 当前存在右儿子，则寻找后继节点，第一次向右搜，之后找最深左节点
 		if (backwardSon != nullptr)
 		{
@@ -119,14 +180,14 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 		NodeColor tmp = currentNode->color;
 
 		// 交换颜色
-		currentNode->color = replaceNoe->color;
+		currentNode->color = replaceNode->color;
 		replaceNode->color = tmp;
 
 		struct nodeRelationship
 		{
-			Node<Keytype, ValType> *father;
-			Node<Keytype, ValType> *leftChild;
-			Node<Keytype, ValType> *rightChild;
+			Node<KeyType, ValType> *father;
+			Node<KeyType, ValType> *leftChild;
+			Node<KeyType, ValType> *rightChild;
 		} cur, rep;
 		cur = {currentNode->father, currentNode->leftChild, currentNode->rightChild};
 		rep = {replaceNode->father, replaceNode->leftChild, replaceNode->rightChild};
@@ -138,10 +199,43 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 		else
 			this->root = replaceNode;
 
+		if (replaceNode->leftChild != nullptr)
+		{
+			replaceNode->leftChild->father = currentNode;
+		}
+		if (replaceNode->rightChild != nullptr)
+		{
+			replaceNode->rightChild->father = currentNode;
+		}
+
+		if (currentNode->leftChild == replaceNode) {
+			replaceNode->leftChild = currentNode;
+			replaceNode->father = currentNode->father;
+			replaceNode->rightChild = currentNode->rightChild;
+			if (currentNode->rightChild != nullptr)
+				currentNode->rightChild->father = replaceNode;
+			currentNode->leftChild = rep.leftChild;
+			currentNode->rightChild = rep.rightChild;
+			currentNode->father = replaceNode;
+			continue;
+		}
+		else if (currentNode->rightChild == replaceNode) {
+			replaceNode->rightChild = currentNode;
+			replaceNode->father = currentNode->father;
+			replaceNode->leftChild = currentNode->leftChild;
+			if (currentNode->leftChild != nullptr)
+				currentNode->leftChild->father = replaceNode;
+			currentNode->leftChild = rep.leftChild;
+			currentNode->rightChild = rep.rightChild;
+			currentNode->father = replaceNode;
+			continue;
+		}
+
 		if (currentNode->leftChild != nullptr)
 		{
 			currentNode->leftChild->father = replaceNode;
 		}
+
 		if (currentNode->rightChild != nullptr)
 		{
 			currentNode->rightChild->father = replaceNode;
@@ -151,14 +245,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 			replaceNode->father->leftChild = currentNode;
 		else
 			replaceNode->father->rightChild = currentNode;
-		if (replaceNode->leftChild != nullptr)
-		{
-			replaceNode->leftChild->father = currentNode;
-		}
-		if (replaceNode->rightChild != nullptr)
-		{
-			replaceNode->rightChild->father = currentNode;
-		}
+		
 
 		currentNode->father = rep.father;
 		currentNode->leftChild = rep.leftChild;
@@ -187,8 +274,8 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 	}
 	else
 	{
-		Node<Keytype, ValType> *brother = (currentNode->father->leftChild == currentNode ? currentNode->father->rightChild : currentNode->father->leftChild);
-		Node<Keytype, ValType> *father = currentNode->father;
+		Node<KeyType, ValType> *brother = (currentNode->father->leftChild == currentNode ? currentNode->father->rightChild : currentNode->father->leftChild);
+		Node<KeyType, ValType> *father = currentNode->father;
 		ChildSide brotherSideToFather = (father->leftChild == currentNode ? ChildSide::RIGHT : ChildSide::LEFT);
 
 		if (father->leftChild == currentNode)
@@ -217,7 +304,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 					this->rotateLeft(father);
 					brother->color = NodeColor::RED;
 					father->color = NodeColor::BLACK;
-					brother->rightChild = NodeColor::BLACK;
+					brother->rightChild->color = NodeColor::BLACK;
 				}
 				//对称的
 				else
@@ -225,7 +312,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 					this->rotateRight(father);
 					brother->color = NodeColor::RED;
 					father->color = NodeColor::BLACK;
-					brother->leftChild = NodeColor::BLACK;
+					brother->leftChild->color = NodeColor::BLACK;
 				}
 			}
 			else if (brother->leftChild != nullptr && brother->rightChild == nullptr)
@@ -241,7 +328,6 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 				{
 					this->rotateRight(brother);
 					this->rotateLeft(father);
-					brother->color = NodeColor::RED;
 					father->color = NodeColor::BLACK;
 				}
 				/*
@@ -256,7 +342,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 					this->rotateRight(father);
 					brother->color = NodeColor::RED;
 					father->color = NodeColor::BLACK;
-					brother->leftChild = NodeColor::BLACK;
+					brother->leftChild->color = NodeColor::BLACK;
 				}
 			}
 			else if (brother->leftChild == nullptr && brother->rightChild != nullptr)
@@ -273,7 +359,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 					this->rotateLeft(father);
 					brother->color = NodeColor::RED;
 					father->color = NodeColor::BLACK;
-					brother->rightChild = NodeColor::BLACK;
+					brother->rightChild->color = NodeColor::BLACK;
 				}
 				/*
 				 *       红
@@ -286,7 +372,6 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 				{
 					this->rotateLeft(brother);
 					this->rotateRight(father);
-					brother->color = NodeColor::RED;
 					father->color = NodeColor::BLACK;
 				}
 			}
@@ -307,30 +392,32 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 			/*
 			 *       黑										黑
 			 *      /  \								   /  \
-			 *del->黑  红       						  黑   黑
+			 *del->黑  红       				              黑   黑
 			 *        /  \                --------->     / \  / \
 			 *       黑  黑						  (原父)红  N N  N
-			 *       /\  /\                            /
-			 *      N  N N N <-红或不存在              N
+			 *       /\  /\                              \
+			 *      N  N N N <-红或不存在                  N
 			 */
 			if (brother->color == NodeColor::RED)
 			{
 				if (brotherSideToFather == ChildSide::RIGHT)
 				{
-					father->color = NodeColor::BLACK;
+					brother->color = NodeColor::BLACK;
+					father->color = NodeColor::RED;
 					this->rotateLeft(father);
-					this->rotateLeft(father->leftChild);
-					if (father->leftChild->leftChild != nullptr)
-						this->fitNeighbourRedNode(father->leftChild->leftChild);
+					this->rotateLeft(father);
+					if (father->rightChild != nullptr)
+						this->fitNeighbourRedNode(father->rightChild);
 				}
 				//对称的
 				else
 				{
-					father->color = NodeColor::BLACK;
+					brother->color = NodeColor::BLACK;
+					father->color = NodeColor::RED;
 					this->rotateRight(father);
-					this->rotateRight(father->leftChild);
-					if (father->rightChild->rightChild != nullptr)
-						this->fitNeighbourRedNode(father->rightChild->rightChild);
+					this->rotateRight(father);
+					if (father->leftChild != nullptr)
+						this->fitNeighbourRedNode(father->leftChild);
 				}
 			}
 			else if (brother->color == NodeColor::BLACK)
@@ -419,7 +506,7 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 					/*
 					 *       黑
 					 *      /  \
-					 *d    黑  黑
+					 *     黑  黑
 					 */
 					brother->color = NodeColor::RED;
 					this->fitUnblancedBlackNode(father);
@@ -427,6 +514,8 @@ BTree<KeyType, ValType> &BTree<KeyType, ValType>::remove(const KeyType &key)
 			}
 		}
 	}
+
+	return *this;
 }
 
 /* 插入一个键为key 值为val的节点 */
@@ -510,14 +599,12 @@ void BTree<KeyType, ValType>::rotateLeft(Node<KeyType, ValType> *node)
 		else if (father->rightChild == node)
 			father->rightChild = rightOld;
 	}
-	node = rightOld; //此时右儿子已经是原节点的位置
-	node->father = father;
-	node->leftChild = old; //原右儿子的左节点是原节点
-	node->leftChild->father = node;
-	// if (rightLeftOld != nullptr)//如果存在原右儿子的左节点
-	node->leftChild->rightChild = rightLeftOld; //添加到原节点的右节点
 	if (rightLeftOld != nullptr)
-		node->leftChild->rightChild->father = old;
+		rightLeftOld->father = old;
+	node->father = rightOld;
+	node->rightChild = rightLeftOld;
+	rightOld->father = father;
+	rightOld->leftChild = old;
 }
 
 template <class KeyType, class ValType>
@@ -538,15 +625,13 @@ void BTree<KeyType, ValType>::rotateRight(Node<KeyType, ValType> *node)
 			father->leftChild = leftOld;
 		else if (father->rightChild == node)
 			father->rightChild = leftOld;
-	}
-	node = leftOld;
-	node->father = father;
-	node->rightChild = old;
-	node->rightChild->father = old;
-	// if (leftRightOld != nullptr)
-	node->rightChild->leftChild = leftRightOld;
+	}	
 	if (leftRightOld != nullptr)
-		node->rightChild->leftChild->father = old;
+		leftRightOld->father = old;
+	node->father = leftOld;
+	node->leftChild = leftRightOld;
+	leftOld->father = father;
+	leftOld->rightChild = old;
 }
 
 /**
@@ -640,7 +725,7 @@ void BTree<KeyType, ValType>::fitNeighbourRedNode(Node<KeyType, ValType> *node)
 			 *			/ \   / \
 			 *		   RB RB 红 RB
 			 **/
-			else if (father->leftChild == currentNode && grandPa->leftChild == father)
+			else if (father->leftChild == currentNode && grandPa->rightChild == father)
 			{
 				this->rotateRight(father);
 				this->rotateLeft(grandPa);
@@ -659,8 +744,8 @@ void BTree<KeyType, ValType>::fitUnblancedBlackNode(Node<KeyType, ValType> *node
 	Node<KeyType, ValType> *currentNode = node;
 	while (currentNode != root)
 	{
-		Node<Keytype, ValType> *brother = (currentNode->father->leftChild == currentNode ? currentNode->father->rightChild : currentNode->father->leftChild);
-		Node<Keytype, ValType> *father = currentNode->father;
+		Node<KeyType, ValType> *brother = (currentNode->father->leftChild == currentNode ? currentNode->father->rightChild : currentNode->father->leftChild);
+		Node<KeyType, ValType> *father = currentNode->father;
 		ChildSide brotherSideToFather = (father->leftChild == currentNode ? ChildSide::RIGHT : ChildSide::LEFT);
 
 		if (father->color == NodeColor::RED)
@@ -731,88 +816,115 @@ void BTree<KeyType, ValType>::fitUnblancedBlackNode(Node<KeyType, ValType> *node
 				father->color = NodeColor::BLACK;
 				brother->color = NodeColor::RED;
 				brother->rightChild->color = NodeColor::BLACK;
-				this.rotateLeft(father);
+				this->rotateLeft(father);
 			}
 			else if (brotherSideToFather == ChildSide::LEFT && brother->leftChild->color == NodeColor::RED)
 			{
 				father->color = NodeColor::BLACK;
 				brother->color = NodeColor::RED;
 				brother->leftChild->color = NodeColor::BLACK;
-				this.rotateRight(father);
+				this->rotateRight(father);
 			}
 			break;
 		} //父节点是红色
 		//父节点是黑色
 		else if (father->color == NodeColor::BLACK)
 		{
-			/***
-			 *		黑
-			 *	   /  \
-			 *	  黑  黑
-			 *		 / \
-			 *	    黑  黑
-			 **/
-			if (brother->leftChild->color == NodeColor::BLACK && brother->rightChild->color == NodeColor::BLACK)
-			{
-				brother->color = NodeColor::RED;
-				currentNode = father;
-			}
-			else if (brotherSideToFather == ChildSide::RIGHT)
-			{
+			if (brother->color == NodeColor::BLACK) {
 				/***
 				 *		黑
 				 *	   /  \
 				 *	  黑  黑
 				 *		 / \
-				 *	    RB  红
+				 *	    黑  黑
 				 **/
-				if (brother->rightChild->color == NodeColor::RED)
+				if (brother->leftChild->color == NodeColor::BLACK && brother->rightChild->color == NodeColor::BLACK)
 				{
+					brother->color = NodeColor::RED;
+					currentNode = father;
+				}
+				else if (brotherSideToFather == ChildSide::RIGHT)
+				{
+					/***
+					 *		黑
+					 *	   /  \
+					 *	  黑  黑
+					 *		 / \
+					 *	    RB  红
+					 **/
+					if (brother->rightChild->color == NodeColor::RED)
+					{
+						brother->rightChild->color = NodeColor::BLACK;
+						this->rotateLeft(father);
+					}
+					/***
+					 *		黑
+					 *	   /  \
+					 *	  黑  黑
+					 *		 / \
+					 *	    红  黑
+					 *     / \
+					 *    RB RB
+					 **/
+					else if (brother->leftChild->color == NodeColor::RED)
+					{
+						brother->leftChild->color = NodeColor::BLACK;
+						this->rotateRight(brother);
+						this->rotateLeft(father);
+					}
+					break;
+				}
+				else if (brotherSideToFather == ChildSide::LEFT)
+				{
+					/***
+					 *		黑
+					 *	   /  \
+					 *	  黑  黑
+					 *	 / \
+					 *  红 RB
+					 **/
+					if (brother->leftChild->color == NodeColor::RED)
+					{
+						brother->leftChild->color = NodeColor::BLACK;
+						this->rotateRight(father);
+					}
+					/***
+					 *		黑
+					 *	   /  \
+					 *	  黑  黑
+					 *	 / \
+					 *  黑 红
+					 *    / \
+					 *   RB RB
+					 **/
+					else if (brother->rightChild->color == NodeColor::RED)
+					{
+						brother->rightChild->color = NodeColor::BLACK;
+						this->rotateLeft(brother);
+						this->rotateRight(father);
+					}
+					break;
+				}
+			}//兄弟节点为黑
+			//兄弟节点为红
+			else {
+				/***
+				*		黑
+				*	   /  \
+				*	  黑  红
+				*		 / \
+				*	    黑  黑
+				**/
+				if (brotherSideToFather == ChildSide::RIGHT) {
+					father->color = NodeColor::RED;
+					brother->color = NodeColor::BLACK;
 					this->rotateLeft(father);
 				}
-				/***
-				 *		黑
-				 *	   /  \
-				 *	  黑  黑
-				 *		 / \
-				 *	    红  黑
-				 *     / \
-				 *    RB RB
-				 **/
-				else if (brother->rightChild->color == NodeColor::BLACK)
-				{
-					brother->leftChild->color = NodeColor::BLACK;
-					this->rotateRight(brother);
-					this->rotateLeft(father);
-				}
-			}
-			else if (brotherSideToFather == ChildSide::LEFT)
-			{
-				/***
-				 *		黑
-				 *	   /  \
-				 *	  黑  黑
-				 *	 / \
-				 *  红 RB
-				 **/
-				if (brother->rightChild->color == NodeColor::RED)
-				{
+				//对称的
+				else if (brotherSideToFather == ChildSide::LEFT) {
+					father->color = NodeColor::RED;
+					brother->color = NodeColor::BLACK;
 					this->rotateRight(father);
-				}
-				/***
-				 *		黑
-				 *	   /  \
-				 *	  黑  黑
-				 *	 / \
-				 *  黑 红
-				 *    / \
-				 *   RB RB
-				 **/
-				else if (brother->leftChild->color == NodeColor::BLACK)
-				{
-					brother->rightChild->color = NodeColor::BLACK;
-					this->rotateRight(brother);
-					this->rotateLeft(father);
 				}
 			}
 		}
