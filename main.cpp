@@ -43,7 +43,7 @@ int main() {
 		//cout << i << "****************************************\n";
 		//ans=i;
 	}
-	cout << ans << '\n';
+
 	end = clock();   //结束时间
 	cout << "time = " << double(end - start) / CLOCKS_PER_SEC << "s" << endl;  //输出时间（单位：ｓ）
 	;
